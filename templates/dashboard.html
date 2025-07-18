@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Fitness Dashboard{% endblock %}
+
+{% block content %}
+<h1>🏋️‍♂️ Fitness Dashboard</h1>
+
+<div class="dashboard-container">
+    <!-- BMI Results -->
+    <div class="result-section">
+        <h2>📊 BMI Status</h2>
+        <div class="result-card">
+            <p><strong>Your BMI:</strong> {{ bmi.value }}</p>
+            <p><strong>Category:</strong> {{ bmi.category }}</p>
+            <div class="image-container">
+                <img src="{{ url_for('static', filename=bmi.image) }}" alt="BMI Status">
+            </div>
+            <p class="motivational-message">{{ bmi.message }}</p>
+        </div>
+    </div>
+
+    <!-- Weight Progress Results -->
+    <div class="result-section">
+        <h2>⚖️ Weight Progress</h2>
+        <div class="result-card">
+            <p><strong>Progress Achieved:</strong> {{ weight_progress.progress_percentage }}%</p>
+            <div class="image-container weight-images-container">
+                {% for image_path in weight_progress.milestone_images %}
+                    <div class="milestone-item">
+                        <img src="{{ url_for('static', filename=image_path) }}" alt="Weight Milestone">
+                        <div class="milestone-percentage">{{ loop.index * 20 }}%</div>
+                    </div>
+                {% endfor %}
+            </div>
+            <p class="motivational-message">{{ weight_progress.message }}</p>
+            <p>You need to achieve {{ weight_progress.remaining_percentage }}% ({{ weight_progress.remaining_kg }} kg) more.</p>
+        </div>
+    </div>
+
+    <!-- Strength Level Results -->
+    <div class="result-section">
+        <h2>💪 Strength Level</h2>
+        <div class="result-card">
+            <p><strong>Total Volume Lifted:</strong> {{ strength.total_volume }} kg</p>
+            <p><strong>Category:</strong> {{ strength.category }}</p>
+            <div class="image-container">
+                <img src="{{ url_for('static', filename=strength.image) }}" alt="Strength Level">
+            </div>
+            <p class="motivational-message">{{ strength.message }}</p>
+        </div>
+    </div>
+
+    <!-- Body Fat Results -->
+    <div class="result-section">
+        <h2>📏 Body Composition</h2>
+        <div class="result-card">
+            <p><strong>Body Fat Percentage:</strong> {% if body_fat %}{{ body_fat.percentage }}%{% endif %}</p>
+            <p><strong>Lean Mass:</strong> {% if body_fat %}{{ body_fat.lean_mass_kg }} kg {% endif %}</p>
+            <p><strong>Fat Mass:</strong> {% if body_fat %}{{ body_fat.fat_mass_kg }} kg {% endif %}</p>
+            {% if body_fat %}
+            <div class="body-composition-charts">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+                  <img src="{{ body_fat.speedometer_chart }}" alt="Body Fat Speedometer" style="max-width:320px;width:100%;height:auto;"/>
+                  <img src="{{ body_fat.bar_chart }}" alt="Lean vs Fat Mass Bar" style="max-width:320px;width:100%;height:auto;"/>
+                </div>
+            </div>
+            <p class="motivational-message">{{ body_fat.message }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="back-button">
+    <a href="{{ url_for('index') }}" class="btn">← Back to Form</a>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='bodyfat-visuals.js') }}"></script>
+{% endblock %}
