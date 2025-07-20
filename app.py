@@ -53,7 +53,6 @@ def generate_lean_fat_bar(lean_mass, fat_mass, total_weight, save_path):
     plt.close()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'MnvXDQaVtWXtjBp2y0PwWEr_6IVoLpUZUGEBtZ3MiMM'
 
 def calculate_bmi(weight, height_cm):
     h = height_cm / 100
@@ -114,7 +113,7 @@ def index():
             data = request.form
             gender = data.get('gender', '').strip()
             if not gender:
-                return render_template('index.html', error='Gender is required')
+                return jsonify({'error': 'Gender is required'}), 400
                 
             age = int(data.get('age', 0))
             height = float(data.get('height', 0))
@@ -130,9 +129,9 @@ def index():
             hips = float(data.get('hips_circumference', 0)) if gender=='female' else 0
             # Validate required fields
             if not all([height, start_weight, target_weight, current_weight, exercise, sets, reps, weight_lifted, waist, neck]):
-                return render_template('index.html', error='All fields are required')
+                return jsonify({'error': 'All fields are required'}), 400
         except (ValueError, KeyError) as e:
-            return render_template('index.html', error=f'Invalid input data - {str(e)}')
+            return jsonify({'error': f'Invalid input data - {str(e)}'}), 400
 
         # Calculate BMI
         bmi_value = calculate_bmi(current_weight, height)
@@ -199,10 +198,16 @@ def index():
             'fat_mass_kg': fat_mass * 0.45359,
             'message': 'The  Formula used is fairly accurate for general use but not 100% precise.'
         }
-        # Only show results, not the form, after POST
-        return render_template('index.html', bmi=bmi, weight_progress=weight_progress, strength=strength, body_fat=body_fat, show_form=False, exercise_type=exercise)
-    # On GET, show the form
-    return render_template('index.html', show_form=True)
+        # Return JSON response
+        return jsonify({
+            'bmi': bmi,
+            'weight_progress': weight_progress,
+            'strength': strength,
+            'body_fat': body_fat,
+            'exercise_type': exercise
+        })
+    # On GET, return a JSON message
+    return jsonify({'message': 'API is running. Use POST to submit data.'})
 
 @app.route('/api/calculate', methods=['POST'])
 def api_calculate():
