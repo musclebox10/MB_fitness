@@ -2,3 +2,4 @@ fastapi
 gunicorn
 pydantic
 matplotlib
+flask
