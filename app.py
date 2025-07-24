@@ -8,6 +8,28 @@ import uuid
 from flask import send_from_directory
 import tempfile
 
+FIREBASE_BMI_IMAGES = {
+            1: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2FBMI%2F1.png?alt=media&token=c6278855-60f8-4f7c-9bba-8fa888b2217f",
+            2: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2FBMI%2F2.png?alt=media&token=efb71f2f-4663-41ad-8855-95998c01906a",
+            3: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2FBMI%2F3.png?alt=media&token=4f3c228b-4660-488c-9788-5120a0141d73",
+            4: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2FBMI%2F4.png?alt=media&token=bbea707a-3db1-440c-949a-82f3706aae59",
+            5: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2FBMI%2F5.png?alt=media&token=dc5e8c9d-1896-4963-b040-65775a1bb424"
+        }
+FIREBASE_WEIGHT_IMAGES = {
+            1: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F1.png?alt=media&token=b0e96ef5-8fbf-49a9-8d1d-7c2fed4e225d",
+            2: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F2.png?alt=media&token=8b471b35-feae-4d34-8e3b-c578e73a7578",
+            3: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F3.png?alt=media&token=60cc2fe7-8140-4f75-86c6-32939bfc9f29",
+            4: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F4.png?alt=media&token=51e9eda2-eb8b-4b0b-b458-1eefcf5ca7b3",
+            5: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F5.png?alt=media&token=d4b4530b-eefc-46e3-9250-3ddf1414248f"
+        }
+FIREBASE_STRENGTH_IMAGES = {
+            1: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F1.png?alt=media&token=451ee35d-740d-4a30-980a-b5adae929451",
+            2: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F2.png?alt=media&token=a633bb5e-dcd9-42d2-9141-0e781d393183",
+            3: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F3.png?alt=media&token=d61734b5-8c63-4f47-8f49-36b3f6f77b8d",
+            4: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F4.png?alt=media&token=b35b3c49-3dde-4942-9c23-5cc87804259e",
+            5: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F5.png?alt=media&token=afc42bbd-9ca6-4ee8-a5d6-c7666ecf9998"
+        }
+
 # --- NEW: Speedometer and Bar Chart Functions ---
 def generate_speedometer_gauge(percent, save_path):
     fig, ax = plt.subplots(figsize=(4,2.5), subplot_kw={'projection': 'polar'})
@@ -72,12 +94,17 @@ def get_bmi_category(bmi):
 
 def calculate_progress(start, current, target):
     total = abs(target - start)
-    done = current - start
-    percent = min((done/total)*100 if total else 0, 100)
-    if done < 0:
-        return round(0,1), round(0,1)
-    else :
-        return round(percent,1), round(total - done,1)
+    done = abs(current - start)
+
+    # Check if progress is in the correct direction
+    if (target < start and current < start and current >= target) or \
+       (target > start and current > start and current <= target):
+        percent = (done / total) * 100 if total else 0
+    else:
+        percent = 0
+
+    remaining = max(total - done, 0)
+    return round(min(percent, 100), 1), round(remaining, 1)
 
 def get_weight_milestones(percent):
     milestones = [20,40,60,80,100]
@@ -139,9 +166,11 @@ def index():
         bmi = {
             'value': bmi_value,
             'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img - 1],
-            'image': f'images/BMI/{bmi_img}.png',
+            'image': FIREBASE_BMI_IMAGES.get(bmi_img, ''),
             'message': bmi_msg
         }
+        
+
         # Calculate weight progress
         percent, remaining = calculate_progress(start_weight, current_weight, target_weight)
         # Weight gain images and fixed percents logic
@@ -163,9 +192,9 @@ def index():
         else:  # percent >= 100
             weight_images = ['1.png', '2.png', '3.png', '4.png', '5.png']
             weight_percents = [20, 40, 60, 80, 100]
-        milestone_images = [f'images/weights/{img}' for img in weight_images]
+        milestone_images = [FIREBASE_WEIGHT_IMAGES.get(int(img.split('.')[0]), '') for img in weight_images]
         milestone_percents = weight_percents
-        milestones = list(zip(milestone_images, milestone_percents))
+        milestones = [{"image": img, "percent": pct} for img, pct in zip(milestone_images, milestone_percents)]
         weight_progress = {
             'progress_percentage': percent,
             'remaining_percentage': round(100 - percent, 1),
@@ -178,7 +207,7 @@ def index():
         strength = {
             'total_volume': total_volume,
             'category': ['Beginner', 'Normal', 'Intermediate', 'Advanced', 'Expert'][strength_img - 1],
-            'image': f'images/strength/{strength_img}.png',
+            'image': FIREBASE_STRENGTH_IMAGES.get(strength_img, ''),
             'message': strength_msg
         }
         # Calculate body fat percentage using new formulas
@@ -239,32 +268,32 @@ def api_calculate():
     bmi = {
         'value': bmi_value,
         'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img - 1],
-        'image': f'images/BMI/{bmi_img}.png',
+        'image': FIREBASE_BMI_IMAGES.get(bmi_img, ''),
         'message': bmi_msg
     }
     # Weight progress
     percent, remaining = calculate_progress(start_weight, current_weight, target_weight)
     if percent <= 20:
-        weight_images = ['1.png']
+        weight_images = [1]
         weight_percents = [percent]
     elif 20 < percent <= 40:
-        weight_images = ['1.png', '2.png']
+        weight_images = [1, 2]
         weight_percents = [20, percent]
     elif 40 < percent <= 60:
-        weight_images = ['1.png', '2.png', '3.png']
+        weight_images = [1, 2, 3]
         weight_percents = [20, 40, percent]
     elif 60 < percent <= 80:
-        weight_images = ['1.png', '2.png', '3.png', '4.png']
+        weight_images = [1, 2, 3, 4]
         weight_percents = [20, 40, 60, percent]
     elif 80 < percent < 100:
-        weight_images = ['1.png', '2.png', '3.png', '4.png', '5.png']
+        weight_images = [1, 2, 3, 4, 5]
         weight_percents = [20, 40, 60, 80, percent]
     else:
-        weight_images = ['1.png', '2.png', '3.png', '4.png', '5.png']
+        weight_images = [1, 2, 3, 4, 5]
         weight_percents = [20, 40, 60, 80, 100]
-    milestone_images = [f'images/weights/{img}' for img in weight_images]
+    milestone_images = [FIREBASE_WEIGHT_IMAGES.get(i, '') for i in weight_images]
     milestone_percents = weight_percents
-    milestones = list(zip(milestone_images, milestone_percents))
+    milestones = [{"image": img, "percent": pct} for img, pct in zip(milestone_images, weight_percents)]
     weight_progress = {
         'progress_percentage': percent,
         'remaining_percentage': round(100 - percent, 1),
@@ -278,7 +307,7 @@ def api_calculate():
     strength = {
         'total_volume': total_volume,
         'category': ['Beginner', 'Normal', 'Intermediate', 'Advanced', 'Expert'][strength_img - 1],
-        'image': f'images/strength/{strength_img}.png',
+        'image': FIREBASE_STRENGTH_IMAGES.get(strength_img, ''),
         'message': strength_msg
     }
     # Body fat
