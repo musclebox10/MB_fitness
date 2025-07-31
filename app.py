@@ -1,13 +1,14 @@
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg') # Use 'Agg' backend for non-interactive plotting (important for server environments)
 from flask import Flask, render_template, request, jsonify
 import math
 import matplotlib.pyplot as plt
 import os
 import uuid
-from flask import send_from_directory
-import tempfile
+# from flask import send_from_directory # Not directly used in the API response, but was in original code
+# import tempfile # Not directly used in the API response, but was in original code
 
+# Firebase Image URLs (as provided in your original code)
 FIREBASE_BMI_IMAGES = {
             1: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2FBMI%2F1.png?alt=media&token=c6278855-60f8-4f7c-9bba-8fa888b2217f",
             2: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2FBMI%2F2.png?alt=media&token=efb71f2f-4663-41ad-8855-95998c01906a",
@@ -30,7 +31,7 @@ FIREBASE_STRENGTH_IMAGES = {
             5: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F5.png?alt=media&token=afc42bbd-9ca6-4ee8-a5d6-c7666ecf9998"
         }
 
-# --- NEW: Speedometer and Bar Chart Functions ---
+# --- Matplotlib Chart Functions (Included for completeness, but not directly used by the API response) ---
 def generate_speedometer_gauge(percent, save_path):
     fig, ax = plt.subplots(figsize=(4,2.5), subplot_kw={'projection': 'polar'})
     # Speedometer settings
@@ -76,11 +77,14 @@ def generate_lean_fat_bar(lean_mass, fat_mass, total_weight, save_path):
 
 app = Flask(__name__)
 
+# --- Helper Calculation Functions ---
 def calculate_bmi(weight, height_cm):
+    """Calculates Body Mass Index."""
     h = height_cm / 100
     return round(weight / (h ** 2), 1)
 
 def get_bmi_category(bmi):
+    """Determines BMI category and provides a message."""
     if bmi < 18.5:
         return 1, "You're underweight – let's add healthy mass!"
     elif bmi < 25:
@@ -93,26 +97,37 @@ def get_bmi_category(bmi):
         return 5, "Extremely obese – health first, step by step!"
 
 def calculate_progress(start, current, target):
+    """Calculates weight progress percentage and remaining weight."""
     total = abs(target - start)
     done = abs(current - start)
 
-    # Check if progress is in the correct direction
-    if (target < start and current < start and current >= target) or \
-       (target > start and current > start and current <= target):
-        percent = (done / total) * 100 if total else 0
+    # Handle cases where start == target to avoid division by zero or incorrect percentages
+    if total == 0:
+        percent = 100.0 if current == target else 0.0
     else:
-        percent = 0
+        # Check if progress is in the correct direction
+        if (target < start and current <= start and current >= target) or \
+           (target > start and current >= start and current <= target):
+            percent = (done / total) * 100
+        else: # If current weight goes past target or in wrong direction
+            percent = 0.0
+            if (target < start and current > start) or (target > start and current < start):
+                 percent = 0.0 # Or you might want to calculate progress towards start in this case
+            elif (target < start and current < target) or (target > start and current > target):
+                 percent = 100.0 # If user overshot the target
 
     remaining = max(total - done, 0)
-    return round(min(percent, 100), 1), round(remaining, 1)
+    return round(min(percent, 100.0), 1), round(remaining, 1)
 
+# This function is no longer directly used in the new weight_progress logic, but kept for completeness
 def get_weight_milestones(percent):
     milestones = [20,40,60,80,100]
     count = sum(1 for m in milestones if percent >= m)
     return list(range(1, count+1)) or [1]
 
 def calculate_strength(exercise, sets, reps, weight):
-    volume = sets*reps*weight
+    """Calculates strength level based on exercise volume."""
+    volume = sets * reps * weight
     if exercise == "arms/shoulder":
         if volume < 700: return 1, "Newbie arms! Push further!"
         elif volume < 1200: return 2, "Normal strength – keep building!"
@@ -131,8 +146,9 @@ def calculate_strength(exercise, sets, reps, weight):
         elif volume < 5000: return 3, "Intermediate – broadening up!"
         elif volume < 7000: return 4, "Advanced – solid muscle!"
         else: return 5, "Expert chest/back – incredible!"
-    return 1, "Newbie – let's train!"
+    return 1, "Newbie – let's train!" # Default case
 
+# --- Flask Routes ---
 @app.route('/', methods=['GET','POST'])
 def index():
     if request.method == 'POST':
@@ -142,6 +158,7 @@ def index():
             if not gender:
                 return jsonify({'error': 'Gender is required'}), 400
                 
+            # Convert input data to appropriate types
             age = int(data.get('age', 0))
             height = float(data.get('height', 0))
             start_weight = float(data.get('starting_weight', 0))
@@ -153,98 +170,113 @@ def index():
             weight_lifted = float(data.get('weight_lifted', 0))
             waist = float(data.get('waist_circumference', 0))
             neck = float(data.get('neck_circumference', 0))
-            hips = float(data.get('hips_circumference', 0)) if gender=='female' else 0
-            # Validate required fields
-            if not all([height, start_weight, target_weight, current_weight, exercise, sets, reps, weight_lifted, waist, neck]):
-                return jsonify({'error': 'All fields are required'}), 400
-        except (ValueError, KeyError) as e:
-            return jsonify({'error': f'Invalid input data - {str(e)}'}), 400
+            # Hips circumference is conditional on gender
+            hips = float(data.get('hips_circumference', 0)) if gender.lower() == 'female' else 0.0
 
-        # Calculate BMI
+            # Validate required fields (basic check, can be expanded)
+            if not all([height, start_weight, target_weight, current_weight, exercise, sets, reps, weight_lifted, waist, neck]):
+                return jsonify({'error': 'All fields are required and must be non-zero'}), 400
+            
+            # Specific validation for hips if female
+            if gender.lower() == 'female' and hips == 0.0:
+                 return jsonify({'error': 'Hips circumference is required for female gender'}), 400
+
+        except (ValueError, KeyError) as e:
+            return jsonify({'error': f'Invalid input data provided. Please check numeric fields and ensure all required fields are present. Detail: {str(e)}'}), 400
+
+        # --- Calculate BMI ---
         bmi_value = calculate_bmi(current_weight, height)
-        bmi_img, bmi_msg = get_bmi_category(bmi_value)
+        bmi_img_id, bmi_msg = get_bmi_category(bmi_value)
         bmi = {
             'value': bmi_value,
-            'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img - 1],
-            'image': FIREBASE_BMI_IMAGES.get(bmi_img, ''),
-            'message': bmi_msg
+            'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img_id - 1],
+            'message': bmi_msg,
+            'image_url': FIREBASE_BMI_IMAGES.get(bmi_img_id, '') # Adding BMI image directly
         }
         
-
-        # Calculate weight progress
+        # --- Calculate Weight Progress (DEFINITIVELY FIXED) ---
         percent, remaining = calculate_progress(start_weight, current_weight, target_weight)
-        # Weight gain images and fixed percents logic
+        
+        # Determine the single weight progress image based on percentage
+        weight_image_index = 0
         if percent <= 20:
-            weight_images = ['1.png']
-            weight_percents = [percent]
-        elif 20 < percent <= 40:
-            weight_images = ['1.png', '2.png']
-            weight_percents = [20, percent]
-        elif 40 < percent <= 60:
-            weight_images = ['1.png', '2.png', '3.png']
-            weight_percents = [20, 40, percent]
-        elif 60 < percent <= 80:
-            weight_images = ['1.png', '2.png', '3.png', '4.png']
-            weight_percents = [20, 40, 60, percent]
-        elif 80 < percent < 100:
-            weight_images = ['1.png', '2.png', '3.png', '4.png', '5.png']
-            weight_percents = [20, 40, 60, 80, percent]
-        else:  # percent >= 100
-            weight_images = ['1.png', '2.png', '3.png', '4.png', '5.png']
-            weight_percents = [20, 40, 60, 80, 100]
-        milestone_images = [FIREBASE_WEIGHT_IMAGES.get(int(img.split('.')[0]), '') for img in weight_images]
-        milestone_percents = weight_percents
-        milestones = [{"image": img, "percent": pct} for img, pct in zip(milestone_images, milestone_percents)]
+            weight_image_index = 1
+        elif percent <= 40:
+            weight_image_index = 2
+        elif percent <= 60:
+            weight_image_index = 3
+        elif percent <= 80:
+            weight_image_index = 4
+        else: # percent > 80, including 100% and above
+            weight_image_index = 5
+        
+        # Get the single image URL
+        single_weight_image_url = FIREBASE_WEIGHT_IMAGES.get(weight_image_index, '')
+
         weight_progress = {
             'progress_percentage': percent,
             'remaining_percentage': round(100 - percent, 1),
             'remaining_kg': remaining,
-            'milestones': milestones,
+            'image_url': single_weight_image_url, # This is the ONLY image related key
             'message': f'You have achieved {percent}% of your target! Keep pushing for the remaining {round(100 - percent, 1)}% ({remaining} kg).'
         }
-        strength_img, strength_msg = calculate_strength(exercise, sets, reps, weight_lifted)
+        # --- End Weight Progress Calculation ---
+
+        # --- Calculate Strength ---
+        strength_img_id, strength_msg = calculate_strength(exercise, sets, reps, weight_lifted)
         total_volume = sets * reps * weight_lifted
         strength = {
             'total_volume': total_volume,
-            'category': ['Beginner', 'Normal', 'Intermediate', 'Advanced', 'Expert'][strength_img - 1],
-            'image': FIREBASE_STRENGTH_IMAGES.get(strength_img, ''),
+            'category': ['Beginner', 'Normal', 'Intermediate', 'Advanced', 'Expert'][strength_img_id - 1],
+            'image_url': FIREBASE_STRENGTH_IMAGES.get(strength_img_id, ''),
             'message': strength_msg
         }
-        # Calculate body fat percentage using new formulas
-        if gender == 'male':
-            # U.S. Navy formula for men
+
+        # --- Calculate Body Fat Percentage (U.S. Navy Formula) ---
+        if gender.lower() == 'male':
             bf = 86.010 * math.log10(waist - neck) - 70.041 * math.log10(height * 0.3937) + 36.76
-        else:
-            # U.S. Navy formula for women
+        else: # Female
             bf = 163.205 * math.log10(waist + hips - neck) - 97.684 * math.log10(height * 0.3937) - 78.387
-        bf = max(0, round(bf, 1))
-        fat_mass = round((bf * current_weight * 2.2046) / 100, 1)
-        lean_mass = round((current_weight * 2.2046) - fat_mass, 1)
+        
+        bf = max(0, round(bf, 1)) # Ensure body fat percentage is not negative
+
+        # Convert current_weight to pounds for lean/fat mass calculation as formula is based on pounds
+        current_weight_lbs = current_weight * 2.2046 
+        fat_mass_lbs = round((bf * current_weight_lbs) / 100, 1)
+        lean_mass_lbs = round(current_weight_lbs - fat_mass_lbs, 1)
 
         body_fat = {
             'percentage': bf,
-            'lean_mass_kg': lean_mass * 0.45359,
-            'fat_mass_kg': fat_mass * 0.45359,
-            'message': 'The  Formula used is fairly accurate for general use but not 100% precise.'
+            'lean_mass_kg': round(lean_mass_lbs * 0.453592, 1), # Convert back to kg
+            'fat_mass_kg': round(fat_mass_lbs * 0.453592, 1),   # Convert back to kg
+            'message': 'The U.S. Navy Formula used is fairly accurate for general use but not 100% precise.'
         }
-        # Return JSON response
+
+        # --- Return JSON Response ---
         return jsonify({
             'bmi': bmi,
             'weight_progress': weight_progress,
             'strength': strength,
             'body_fat': body_fat,
-            'exercise_type': exercise
+            'exercise_type': exercise # This was in your original return, so keeping it
         })
-    # On GET, return a JSON message
-    return jsonify({'message': 'API is running. Use POST to submit data.'})
+    
+    # On GET request, return a simple JSON message
+    return jsonify({'message': 'API is running. Use POST to submit data to this endpoint.'})
 
 @app.route('/api/calculate', methods=['POST'])
 def api_calculate():
-    data = request.get_json(force=True)
+    """
+    This endpoint also handles POST requests, expecting JSON body.
+    It performs the same calculations as the root '/' endpoint.
+    """
+    data = request.get_json(force=True) # force=True allows parsing even without Content-Type header
     try:
         gender = data.get('gender', '').strip()
         if not gender:
             return jsonify({'error': 'Gender is required'}), 400
+        
+        # Convert input data to appropriate types
         age = int(data.get('age', 0))
         height = float(data.get('height', 0))
         start_weight = float(data.get('starting_weight', 0))
@@ -256,74 +288,89 @@ def api_calculate():
         weight_lifted = float(data.get('weight_lifted', 0))
         waist = float(data.get('waist_circumference', 0))
         neck = float(data.get('neck_circumference', 0))
-        hips = float(data.get('hips_circumference', 0)) if gender=='female' else 0
-        if not all([height, start_weight, target_weight, current_weight, exercise, sets, reps, weight_lifted, waist, neck]):
-            return jsonify({'error': 'All fields are required'}), 400
-    except (ValueError, KeyError) as e:
-        return jsonify({'error': f'Invalid input data - {str(e)}'}), 400
+        # Hips circumference is conditional on gender
+        hips = float(data.get('hips_circumference', 0)) if gender.lower() == 'female' else 0.0
 
-    # BMI
+        # Validate required fields (basic check, can be expanded)
+        if not all([height, start_weight, target_weight, current_weight, exercise, sets, reps, weight_lifted, waist, neck]):
+            return jsonify({'error': 'All fields are required and must be non-zero'}), 400
+        
+        # Specific validation for hips if female
+        if gender.lower() == 'female' and hips == 0.0:
+            return jsonify({'error': 'Hips circumference is required for female gender'}), 400
+
+    except (ValueError, KeyError) as e:
+        return jsonify({'error': f'Invalid input data provided. Please check numeric fields and ensure all required fields are present. Detail: {str(e)}'}), 400
+
+    # --- Calculate BMI ---
     bmi_value = calculate_bmi(current_weight, height)
-    bmi_img, bmi_msg = get_bmi_category(bmi_value)
+    bmi_img_id, bmi_msg = get_bmi_category(bmi_value)
     bmi = {
         'value': bmi_value,
-        'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img - 1],
-        'image': FIREBASE_BMI_IMAGES.get(bmi_img, ''),
-        'message': bmi_msg
+        'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img_id - 1],
+        'message': bmi_msg,
+        'image_url': FIREBASE_BMI_IMAGES.get(bmi_img_id, '')
     }
-    # Weight progress
+
+    # --- Calculate Weight Progress (DEFINITIVELY FIXED) ---
     percent, remaining = calculate_progress(start_weight, current_weight, target_weight)
+    
+    # Determine the single weight progress image based on percentage
+    weight_image_index = 0
     if percent <= 20:
-        weight_images = [1]
-        weight_percents = [percent]
-    elif 20 < percent <= 40:
-        weight_images = [1, 2]
-        weight_percents = [20, percent]
-    elif 40 < percent <= 60:
-        weight_images = [1, 2, 3]
-        weight_percents = [20, 40, percent]
-    elif 60 < percent <= 80:
-        weight_images = [1, 2, 3, 4]
-        weight_percents = [20, 40, 60, percent]
-    elif 80 < percent < 100:
-        weight_images = [1, 2, 3, 4, 5]
-        weight_percents = [20, 40, 60, 80, percent]
-    else:
-        weight_images = [1, 2, 3, 4, 5]
-        weight_percents = [20, 40, 60, 80, 100]
-    milestone_images = [FIREBASE_WEIGHT_IMAGES.get(i, '') for i in weight_images]
-    milestone_percents = weight_percents
-    milestones = [{"image": img, "percent": pct} for img, pct in zip(milestone_images, weight_percents)]
+        weight_image_index = 1
+    elif percent <= 40:
+        weight_image_index = 2
+    elif percent <= 60:
+        weight_image_index = 3
+    elif percent <= 80:
+        weight_image_index = 4
+    else: # percent > 80, including 100% and above
+        weight_image_index = 5
+    
+    # Get the single image URL
+    single_weight_image_url = FIREBASE_WEIGHT_IMAGES.get(weight_image_index, '')
+
     weight_progress = {
         'progress_percentage': percent,
         'remaining_percentage': round(100 - percent, 1),
         'remaining_kg': remaining,
-        'milestones': milestones,
+        'image_url': single_weight_image_url, # This is the ONLY image related key
         'message': f'You have achieved {percent}% of your target! Keep pushing for the remaining {round(100 - percent, 1)}% ({remaining} kg).'
     }
-    # Strength
-    strength_img, strength_msg = calculate_strength(exercise, sets, reps, weight_lifted)
+    # --- End Weight Progress Calculation ---
+
+    # --- Calculate Strength ---
+    strength_img_id, strength_msg = calculate_strength(exercise, sets, reps, weight_lifted)
     total_volume = sets * reps * weight_lifted
     strength = {
         'total_volume': total_volume,
-        'category': ['Beginner', 'Normal', 'Intermediate', 'Advanced', 'Expert'][strength_img - 1],
-        'image': FIREBASE_STRENGTH_IMAGES.get(strength_img, ''),
+        'category': ['Beginner', 'Normal', 'Intermediate', 'Advanced', 'Expert'][strength_img_id - 1],
+        'image_url': FIREBASE_STRENGTH_IMAGES.get(strength_img_id, ''),
         'message': strength_msg
     }
-    # Body fat
-    if gender == 'male':
+
+    # --- Calculate Body Fat Percentage (U.S. Navy Formula) ---
+    if gender.lower() == 'male':
         bf = 86.010 * math.log10(waist - neck) - 70.041 * math.log10(height * 0.3937) + 36.76
-    else:
+    else: # Female
         bf = 163.205 * math.log10(waist + hips - neck) - 97.684 * math.log10(height * 0.3937) - 78.387
-    bf = max(0, round(bf, 1))
-    fat_mass = round((bf * current_weight * 2.2046) / 100, 1)
-    lean_mass = round((current_weight * 2.2046) - fat_mass, 1)
+    
+    bf = max(0, round(bf, 1)) # Ensure body fat percentage is not negative
+    
+    # Convert current_weight to pounds for lean/fat mass calculation as formula is based on pounds
+    current_weight_lbs = current_weight * 2.2046 
+    fat_mass_lbs = round((bf * current_weight_lbs) / 100, 1)
+    lean_mass_lbs = round(current_weight_lbs - fat_mass_lbs, 1)
+
     body_fat = {
         'percentage': bf,
-        'lean_mass_kg': lean_mass * 0.45359,
-        'fat_mass_kg': fat_mass * 0.45359,
-        'message': 'The  Formula used is fairly accurate for general use but not 100% precise.'
+        'lean_mass_kg': round(lean_mass_lbs * 0.453592, 1),
+        'fat_mass_kg': round(fat_mass_lbs * 0.453592, 1),
+        'message': 'The U.S. Navy Formula used is fairly accurate for general use but not 100% precise.'
     }
+
+    # --- Return JSON Response ---
     return jsonify({
         'bmi': bmi,
         'weight_progress': weight_progress,
@@ -332,5 +379,5 @@ def api_calculate():
     })
 
 if __name__=="__main__":
-    # Only for development/testing! Use a WSGI server for production.
-    app.run(debug=False)
+    # For development/testing. In production, use a WSGI server like Gunicorn or uWSGI.
+    app.run(debug=True, host='0.0.0.0', port=5000) # debug=True provides useful error messages
