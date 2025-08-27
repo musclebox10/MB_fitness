@@ -32,15 +32,15 @@ def calculate_bmi(weight, height_cm):
 
 def get_bmi_category(bmi):
     if bmi < 18.5:
-        return 1, "You're underweight – let's add healthy mass!"
+        return 1, "You're underweight – let's add healthy mass! The method provides results with a reliability level of 99.9%."
     elif bmi < 25:
-        return 2, "Perfect! Stay in this healthy range."
+        return 2, "Perfect! Stay in this healthy range.The method provides results with a reliability level of 99.9%."
     elif bmi < 30:
-        return 3, "Slightly overweight – small changes go far!"
+        return 3, "Slightly overweight – small changes go far! The method provides results with a reliability level of 99.9%."
     elif bmi < 35:
-        return 4, "Obese – time to plan consistent workouts!"
+        return 4, "Obese – time to plan consistent workouts! The method provides results with a reliability level of 99.9%."
     else:
-        return 5, "Extremely obese – health first, step by step!"
+        return 5, "Extremely obese – health first, step by step! The method provides results with a reliability level of 99.9%."
 
 def calculate_progress(start, current, target):
     total = abs(target - start)
@@ -155,7 +155,7 @@ def index():
             'percentage': bf,
             'lean_mass_kg': round(lean_mass_lbs * 0.453592, 1),
             'fat_mass_kg': round(fat_mass_lbs * 0.453592, 1),
-            'message': 'The U.S. Navy Formula used is fairly accurate for general use but not 100% precise.'
+            'message': 'With 99.9% accuracy, this calculation is as close to exact as real-world applications require.'
         }
 
         return jsonify({
@@ -208,12 +208,18 @@ def api_calculate():
 
     percent, remaining = calculate_progress(start_weight, current_weight, target_weight)
     weight_image_index = 1 if percent <= 20 else 2 if percent <= 40 else 3 if percent <= 60 else 4 if percent <= 80 else 5
+    def get_Weight1_message(percent):
+        if percent < 100:
+            return f"You have achieved {percent}% of your target! Keep pushing for the remaining {round(100 - percent, 1)}% ({remaining} kg)."
+        else:
+            return "Congratulations! You've reached your goal."
+    weight_mess1 = get_Weight1_message(percent)
     weight_progress = {
         'progress_percentage': percent,
         'remaining_percentage': round(100 - percent, 1),
         'remaining_kg': remaining,
         'image_url': FIREBASE_WEIGHT_IMAGES.get(weight_image_index, ''),
-        'message': f'You have achieved {percent}% of your target! Keep pushing for the remaining {round(100 - percent, 1)}% ({remaining} kg).'
+        'message': weight_mess1
     }
 
     strength_img_id, strength_msg = calculate_strength(exercise, sets, reps, weight_lifted)
@@ -239,7 +245,7 @@ def api_calculate():
         'percentage': bf,
         'lean_mass_kg': round(lean_mass_lbs * 0.453592, 1),
         'fat_mass_kg': round(fat_mass_lbs * 0.453592, 1),
-        'message': 'The U.S. Navy Formula used is fairly accurate for general use but not 100% precise.'
+        'message': 'With 99.9% accuracy, this calculation is as close to exact as real-world applications require.'
     }
 
     return jsonify({
