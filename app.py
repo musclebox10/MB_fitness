@@ -86,8 +86,12 @@ def index():
 
 @app.route('/api/calculate', methods=['POST'])
 def api_calculate():
-    try:
         data = request.get_json(force=True)
+        # --- NEW: Print the JSON Body ---
+        print("--- JSON Body ---")
+        print(data)
+        print("="*50)
+        
         if not isinstance(data, dict):
              return jsonify({'error': 'Invalid JSON format. Must be an object.'}), 400
     except:
@@ -96,7 +100,6 @@ def api_calculate():
     results = {}
 
     # --- 1. BMI Calculation (Optional) ---
-    # Requires: current_weight, height
     if 'current_weight' in data and 'height' in data:
         try:
             current_weight = float(data['current_weight'])
@@ -113,7 +116,6 @@ def api_calculate():
             results['bmi_error'] = "Invalid 'current_weight' or 'height' provided for BMI calculation."
 
     # --- 2. Weight Progress Calculation (Optional) ---
-    # Requires: starting_weight, current_weight, target_weight
     if 'starting_weight' in data and 'current_weight' in data and 'target_weight' in data:
         try:
             start_weight = float(data['starting_weight'])
@@ -138,7 +140,6 @@ def api_calculate():
             results['weight_progress_error'] = "Invalid weight values provided for progress calculation."
 
     # --- 3. Strength Calculation (Optional) ---
-    # Requires: exercise_type, sets, reps, weight_lifted
     if 'exercise_type' in data and 'sets' in data and 'reps' in data and 'weight_lifted' in data:
         try:
             exercise = str(data['exercise_type']).strip()
@@ -158,8 +159,6 @@ def api_calculate():
              results['strength_error'] = "Invalid values provided for strength calculation."
 
     # --- 4. Body Fat Calculation (Optional) ---
-    # Requires: gender, waist_circumference, neck_circumference, height, current_weight
-    # Additionally requires 'hips_circumference' for females.
     bf_base_params = ['gender', 'waist_circumference', 'neck_circumference', 'height', 'current_weight']
     if all(param in data for param in bf_base_params):
         try:
@@ -192,7 +191,6 @@ def api_calculate():
                 }
         except (ValueError, TypeError):
              results['body_fat_error'] = "Invalid values provided for body fat calculation."
-
 
     # --- Final Response ---
     if not results:
