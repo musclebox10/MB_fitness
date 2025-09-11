@@ -22,7 +22,7 @@ FIREBASE_STRENGTH_IMAGES = {
 
 app = Flask(__name__)
 
-# --- Helper Functions (No changes needed here) ---
+# --- Helper Functions ---
 def calculate_bmi(weight, height_cm):
     h = height_cm / 100
     return round(weight / (h ** 2), 1)
@@ -86,22 +86,20 @@ def index():
 
 @app.route('/api/calculate', methods=['POST'])
 def api_calculate():
-    # --- NEW: Print Request Structure to Console ---
+    # --- This block prints the request details to your logs ---
     print("="*50)
     print(f"🔥 New API Hit on endpoint: {request.path}")
     print(f"From IP Address: {request.remote_addr}")
     print(f"Request Method: {request.method}")
     print("--- Headers ---")
     print(request.headers)
-    # --- End of New Code ---
     
     try:
+        # --- This is the correct way to get data from any device ---
         data = request.get_json(force=True)
-        # --- NEW: Print the JSON Body ---
         print("--- JSON Body ---")
         print(data)
         print("="*50)
-        # --- End of New Code ---
         
         if not isinstance(data, dict):
              return jsonify({'error': 'Invalid JSON format. Must be an object.'}), 400
