@@ -3,4 +3,4 @@ gunicorn
 pydantic
 matplotlib
 flask
-cors
+flask_cors
