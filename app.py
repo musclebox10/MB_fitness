@@ -1,6 +1,7 @@
 import matplotlib
 matplotlib.use('Agg')
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # <-- NEW: Import CORS
 import math
 
 # --- (Firebase URLs and Helper functions remain the same) ---
@@ -19,6 +20,8 @@ FIREBASE_STRENGTH_IMAGES = {
     5: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F5.png?alt=media&token=afc42bbd-9ca6-4ee8-a5d6-c7666ecf9998"
 }
 app = Flask(__name__)
+CORS(app)  # <-- NEW: Enable CORS for your entire app
+
 def calculate_bmi(weight, height_cm): h = height_cm / 100; return round(weight / (h ** 2), 1)
 def get_bmi_category(bmi):
     if bmi < 18.5: return 1, "You're underweight – let's add healthy mass! The method provides results with a reliability level of 99.9%."
@@ -59,44 +62,22 @@ def calculate_strength(exercise, sets, reps, weight):
         else: return 5, "Expert chest/back – incredible!"
     return 1, "Newbie – let's train!"
 
-# --- NEW: Define the expected data types for all possible parameters ---
 EXPECTED_TYPES = {
-    "gender": str,
-    "exercise_type": str,
-    "age": int,
-    "sets": int,
-    "reps": int,
-    "height": float,
-    "starting_weight": float,
-    "target_weight": float,
-    "current_weight": float,
-    "weight_lifted": float,
-    "waist_circumference": float,
-    "neck_circumference": float,
-    "hips_circumference": float
+    "gender": str, "exercise_type": str, "age": int, "sets": int, "reps": int, "height": float,
+    "starting_weight": float, "target_weight": float, "current_weight": float, "weight_lifted": float,
+    "waist_circumference": float, "neck_circumference": float, "hips_circumference": float
 }
 
-# --- NEW: A helper function to validate and convert the incoming data ---
 def validate_and_convert_data(raw_data, schema):
-    """
-    Validates raw dictionary data against a schema of expected types.
-    Returns a tuple: (converted_data, errors)
-    """
-    converted_data = {}
-    errors = {}
+    converted_data, errors = {}, {}
     for key, expected_type in schema.items():
         if key in raw_data:
             value = raw_data[key]
             try:
-                # Try to convert the value to the expected type
                 converted_data[key] = expected_type(value)
             except (ValueError, TypeError):
-                # If conversion fails, record a specific error for that key
                 errors[key] = f"Invalid value '{value}'. Expected a {expected_type.__name__}."
-    
-    # Return the clean, converted data and any errors found
     return converted_data, errors
-
 
 @app.route('/', methods=['GET'])
 def index():
@@ -104,41 +85,28 @@ def index():
 
 @app.route('/api/calculate', methods=['POST'])
 def api_calculate():
-    # --- Logging Block (No changes) ---
-    print("="*50)
-    print(f"🔥 New API Hit on endpoint: {request.path}")
-    
+    print("="*50); print(f"🔥 New API Hit on endpoint: {request.path}")
     try:
         raw_data = request.get_json(force=True)
-        print("--- JSON Body ---")
-        print(raw_data)
-        print("="*50)
+        print("--- JSON Body ---"); print(raw_data); print("="*50)
         if not isinstance(raw_data, dict):
              return jsonify({'error': 'Invalid JSON format. Must be an object.'}), 400
     except Exception as e:
         print(f"Error decoding JSON: {e}")
         return jsonify({'error': 'Failed to decode JSON object from request body.'}), 400
     
-    # --- MODIFIED: Use the new validation function ---
     data, errors = validate_and_convert_data(raw_data, EXPECTED_TYPES)
     
-    # If there were any conversion errors, return them immediately
     if errors:
         return jsonify({'error': 'Invalid data types provided', 'details': errors}), 400
         
     results = {}
 
-    # --- 1. BMI Calculation (Now using validated 'data' dictionary) ---
     if 'current_weight' in data and 'height' in data:
         bmi_value = calculate_bmi(data['current_weight'], data['height'])
         bmi_img_id, bmi_msg = get_bmi_category(bmi_value)
-        results['bmi'] = {
-            'value': bmi_value,
-            'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img_id - 1],
-            'message': bmi_msg
-        }
+        results['bmi'] = {'value': bmi_value, 'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img_id - 1], 'message': bmi_msg}
 
-    # --- 2. Weight Progress Calculation ---
     if 'starting_weight' in data and 'current_weight' in data and 'target_weight' in data:
         percent, remaining = calculate_progress(data['starting_weight'], data['current_weight'], data['target_weight'])
         weight_image_index = 1 if percent <= 20 else 2 if percent <= 40 else 3 if percent <= 60 else 4 if percent <= 80 else 5
@@ -149,17 +117,14 @@ def api_calculate():
             'image_url': FIREBASE_WEIGHT_IMAGES.get(weight_image_index, ''), 'message': message
         }
 
-    # --- 3. Strength Calculation ---
     if 'exercise_type' in data and 'sets' in data and 'reps' in data and 'weight_lifted' in data:
         strength_img_id, strength_msg = calculate_strength(data['exercise_type'], data['sets'], data['reps'], data['weight_lifted'])
         total_volume = data['sets'] * data['reps'] * data['weight_lifted']
         results['strength'] = {
-            'total_volume': total_volume,
-            'category': ['Beginner', 'Normal', 'Intermediate', 'Advanced', 'Expert'][strength_img_id - 1],
+            'total_volume': total_volume, 'category': ['Beginner', 'Normal', 'Intermediate', 'Advanced', 'Expert'][strength_img_id - 1],
             'image_url': FIREBASE_STRENGTH_IMAGES.get(strength_img_id, ''), 'message': strength_msg
         }
 
-    # --- 4. Body Fat Calculation ---
     bf_base_params = ['gender', 'waist_circumference', 'neck_circumference', 'height', 'current_weight']
     if all(param in data for param in bf_base_params):
         gender = data.get('gender', '').lower()
@@ -188,3 +153,4 @@ def api_calculate():
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
+
