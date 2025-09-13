@@ -255,5 +255,25 @@ def api_calculate():
         'body_fat': body_fat
     })
 
+@app.route('/api/bmi/calculate', methods=['POST'])
+def bmi_calculate():
+    data = request.get_json(force=True)
+    age = int(data.get('age', 0))
+    height = float(data.get('height', 0))
+    current_weight = float(data.get('current_weight', 0))
+    bmi_value = calculate_bmi(current_weight, height)
+    bmi_img_id, bmi_msg = get_bmi_category(bmi_value)
+    bmi = {
+        'value': bmi_value,
+        'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img_id - 1],
+        'message': bmi_msg
+    }
+    return jsonify({
+        'bmi': bmi,
+        'age': age
+    })
+
+
+
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5000)
