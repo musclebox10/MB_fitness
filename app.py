@@ -86,7 +86,7 @@ def calculate_strength(exercise, sets, reps, weight):
     return 1, "Newbie – let's train!"
 
 def perform_full_calculation(data):
-    """Core logic for all fitness calculations EXCEPT BMI."""
+    """Core logic to perform all fitness calculations."""
     gender = data.get('gender', '').strip()
     height = float(data.get('height', 0))
     current_weight = float(data.get('current_weight', 0))
@@ -100,7 +100,14 @@ def perform_full_calculation(data):
     neck = float(data.get('neck_circumference', 0))
     hips = float(data.get('hips_circumference', 0)) if gender.lower() == 'female' else 0.0
 
-    # ✨ BMI calculation logic REMOVED from this function
+    # BMI Calculation
+    bmi_value = calculate_bmi(current_weight, height)
+    bmi_img_id, bmi_msg = get_bmi_category(bmi_value)
+    bmi = {
+        'value': bmi_value,
+        'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img_id - 1],
+        'message': bmi_msg
+    }
 
     # Weight Progress Calculation
     percent, remaining = calculate_progress(start_weight, current_weight, target_weight)
@@ -142,8 +149,8 @@ def perform_full_calculation(data):
         'message': 'With 99.9% accuracy, this calculation is as close to exact as real-world applications require.'
     }
 
-    # ✨ Return dictionary NO LONGER includes BMI
     return {
+        'bmi': bmi,
         'weight_progress': weight_progress,
         'strength': strength,
         'body_fat': body_fat
@@ -159,9 +166,10 @@ def home():
 
 @app.route('/api/calculate', methods=['POST'])
 def api_calculate():
-    """Endpoint to calculate ALL fitness metrics EXCEPT BMI."""
+    """Endpoint to calculate ALL fitness metrics."""
     try:
         data = request.get_json(force=True)
+        # Basic validation for required fields for a full calculation
         required_fields = ['gender', 'height', 'current_weight', 'starting_weight', 'target_weight', 'exercise_type', 'sets', 'reps', 'weight_lifted', 'waist_circumference', 'neck_circumference']
         if not all(field in data for field in required_fields):
             return jsonify({'error': 'Missing one or more required fields'}), 400
@@ -176,22 +184,23 @@ def api_calculate():
     except Exception as e:
         return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
 
+# ✨ --- NEW BMI-ONLY ROUTE --- ✨
 @app.route('/api/bmi/calculate', methods=['POST'])
 def api_calculate_bmi():
     """Endpoint to calculate ONLY the BMI."""
     try:
         data = request.get_json(force=True)
-        # ✨ Changed input keys to 'height' and 'weight'
         height = float(data.get('height', 0))
-        weight = float(data.get('weight', 0))
+        current_weight = float(data.get('current_weight', 0))
 
-        if not all([height, weight]):
-            # ✨ Updated error message for new keys
-            return jsonify({'error': 'Fields "height" and "weight" are required and must be non-zero.'}), 400
+        if not all([height, current_weight]):
+            return jsonify({'error': 'Fields "height" and "current_weight" are required and must be non-zero.'}), 400
 
-        bmi_value = calculate_bmi(weight, height)
+        # Perform only the BMI calculation
+        bmi_value = calculate_bmi(current_weight, height)
         bmi_img_id, bmi_msg = get_bmi_category(bmi_value)
         
+        # Format the response
         bmi_result = {
             'value': bmi_value,
             'category': ['Underweight', 'Normal Weight', 'Overweight', 'Obese', 'Extremely Obese'][bmi_img_id - 1],
@@ -201,7 +210,7 @@ def api_calculate_bmi():
         return jsonify({'bmi': bmi_result})
 
     except (ValueError, TypeError, KeyError):
-        return jsonify({'error': 'Invalid input. Please send a JSON object with "height" and "weight" as numbers.'}), 400
+        return jsonify({'error': 'Invalid input. Please send a JSON object with "height" and "current_weight" as numbers.'}), 400
     except Exception as e:
         return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
 
