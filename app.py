@@ -62,7 +62,7 @@ def calculate_progress(start, current, target):
 
 def calculate_strength(exercise, sets, reps, weight):
     volume = sets * reps * weight
-    if exercise == "arms/shoulder":
+    if exercise == "arm":
         if volume < 700: return 1, "Newbie arms! Push further!"
         elif volume < 1200: return 2, "Normal strength – keep building!"
         elif volume < 2000: return 3, "Intermediate – great shape!"
@@ -74,8 +74,20 @@ def calculate_strength(exercise, sets, reps, weight):
         elif volume < 9000: return 3, "Intermediate – nice strength!"
         elif volume < 13000: return 4, "Advanced legs – wow!"
         else: return 5, "Expert – unstoppable legs!"
-    elif exercise == "chest/back":
+    elif exercise == "chest":
         if volume < 1500: return 1, "New chest/back – get started!"
+        elif volume < 3000: return 2, "Normal – feel the burn!"
+        elif volume < 5000: return 3, "Intermediate – broadening up!"
+        elif volume < 6500: return 4, "Advanced – solid muscle!"
+        else: return 5, "Expert chest/back – incredible!"
+    elif exercise == "shoulder":
+        if volume < 1000: return 1, "Newbie arms! Push further!"
+        elif volume < 1200: return 2, "Normal strength – keep building!"
+        elif volume < 2000: return 3, "Intermediate – great shape!"
+        elif volume < 3000: return 4, "Advanced – impressive!"
+        else: return 5, "Expert level – beast mode!"
+    elif exercise == "back":
+        if volume < 2000: return 1, "New back – get started!"
         elif volume < 3000: return 2, "Normal – feel the burn!"
         elif volume < 5000: return 3, "Intermediate – broadening up!"
         elif volume < 7000: return 4, "Advanced – solid muscle!"
