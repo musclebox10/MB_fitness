@@ -8,19 +8,19 @@ import uuid
 
 # --- Firebase Image URLs (Weight and Strength only) ---
 FIREBASE_WEIGHT_IMAGES = {
-    1: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F1.png?alt=media&token=b0e96ef5-8fbf-49a9-8d1d-7c2fed4e225d",
-    2: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F2.png?alt=media&token=8b471b35-feae-4d34-8e3b-c578e73a7578",
-    3: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F3.png?alt=media&token=60cc2fe7-8140-4f75-86c6-32939bfc9f29",
-    4: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F4.png?alt=media&token=51e9eda2-eb8b-4b0b-b458-1eefcf5ca7b3",
-    5: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fweights%2F5.png?alt=media&token=d4b4530b-eefc-46e3-9250-3ddf1414248f"
+    1: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fweight%2F1.png?alt=media&token=8a944caf-56c7-4c10-a51b-33815bc7c9e2",
+    2: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fweight%2F2.png?alt=media&token=dc4545e3-4c8d-4901-ac65-9c479a6b4925",
+    3: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fweight%2F3.png?alt=media&token=e7edf680-8300-4b67-b7f8-47d4173a56d7",
+    4: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fweight%2F4.png?alt=media&token=b842be0c-f895-4a0a-882e-c27b87001955",
+    5: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fweight%2F5.png?alt=media&token=a45ec36d-7ffe-4011-adc5-e953ce6c125b"
 }
 
 FIREBASE_STRENGTH_IMAGES = {
-    1: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F1.png?alt=media&token=451ee35d-740d-4a30-980a-b5adae929451",
-    2: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F2.png?alt=media&token=a633bb5e-dcd9-42d2-9141-0e781d393183",
-    3: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F3.png?alt=media&token=d61734b5-8c63-4f47-8f49-36b3f6f77b8d",
-    4: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F4.png?alt=media&token=b35b3c49-3dde-4942-9c23-5cc87804259e",
-    5: "https://firebasestorage.googleapis.com/v0/b/muscel-box-09.firebasestorage.app/o/images%2Fstrength%2F5.png?alt=media&token=afc42bbd-9ca6-4ee8-a5d6-c7666ecf9998"
+    1: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fstrength%2F1.png?alt=media&token=a2ae3b8b-50dc-43c3-8738-c71904d699d0",
+    2: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fstrength%2F2.png?alt=media&token=96c58d95-c2c3-4356-86a4-8ac8391c26c6",
+    3: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fstrength%2F3.png?alt=media&token=2a635b2f-aecd-41f2-acee-23925e736c07",
+    4: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fstrength%2F4.png?alt=media&token=ad28805f-0aa7-444b-856b-e8d96baf2fb1",
+    5: "https://firebasestorage.googleapis.com/v0/b/musclebox-765b5.firebasestorage.app/o/progress%2Fstrength%2F5.png?alt=media&token=4be97400-e750-4417-af62-d5cf79217fb5"
 }
 
 app = Flask(__name__)
